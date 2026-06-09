@@ -1,0 +1,13 @@
+# Fivetran Connector SDK local debug artifacts
+files/
+warehouse.db
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local secrets — keep real API keys out of version control
+configuration.local.json

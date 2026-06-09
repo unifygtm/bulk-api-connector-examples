@@ -1,0 +1,7 @@
+{
+  "api_key": "<YOUR_UNIFY_API_KEY>",
+  "base_url": "https://api.unifygtm.com",
+  "resources": "company",
+  "page_size": "1000",
+  "poll_timeout_seconds": "900"
+}

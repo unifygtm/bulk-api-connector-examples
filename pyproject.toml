@@ -1,0 +1,23 @@
+[project]
+name = "unify-bulk-fivetran-connector"
+version = "0.1.0"
+description = "Fivetran Connector SDK connector for the Unify Bulk API"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "fivetran-connector-sdk",
+    "requests",
+    # Used by the SDK's local `debug()` to scan imports; not needed at deploy time.
+    "pipreqs",
+]
+
+# Note: requirements.txt is intentionally kept dependency-free because Fivetran
+# pre-installs `requests` and `fivetran_connector_sdk` in its runtime and errors
+# if they are declared there. These deps live here only for local development
+# with uv.
+
+[tool.pyright]
+# Resolve imports against the local uv-managed virtualenv so editors/LSPs find
+# the dependencies regardless of how they were launched.
+venvPath = "."
+venv = ".venv"

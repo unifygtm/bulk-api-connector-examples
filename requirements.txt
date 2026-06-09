@@ -1,0 +1,4 @@
+# This connector only uses `requests`, which Fivetran pre-installs in the
+# Connector SDK runtime. Per Fivetran's guidance, do NOT list `requests` or
+# `fivetran_connector_sdk` here — declaring pre-installed packages causes a
+# deploy error. Add any *additional* third-party dependencies below.
