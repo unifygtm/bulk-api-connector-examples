@@ -6,9 +6,10 @@ Each subdirectory is a self-contained example showing how to pull data from Unif
 
 ## Examples
 
-| Example                   | Description                                                                                                                                       |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`fivetran/`](./fivetran) | A custom [Fivetran Connector SDK](https://fivetran.com/docs/connector-sdk) connector that syncs data from the Unify Bulk API into your warehouse. |
+| Example                   | Description                                                                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`fivetran/`](./fivetran) | A custom [Fivetran Connector SDK](https://fivetran.com/docs/connector-sdk) connector that syncs data from the Unify Bulk API into your warehouse.          |
+| [`airbyte/`](./airbyte)   | A low-code (manifest-only) [Airbyte](https://docs.airbyte.com/connector-development/) source connector that syncs the Unify Bulk API into any destination. |
 
 ## More examples coming soon
 
