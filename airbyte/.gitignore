@@ -1,0 +1,8 @@
+# Local secrets — keep real API keys out of version control.
+secrets/
+config.local.json
+configured_catalog.local.json
+
+# Connector run artifacts.
+output/
+*.log
