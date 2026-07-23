@@ -10,6 +10,7 @@ asynchronous Bulk API. Each synced table maps to one Bulk API resource:
     event                       /data/v1/events
     sequence_enrollment         /sequences/v1/enrollments
     sequence_enrollment_step    /sequences/v1/enrollment-steps
+    task                        /tasks/v1/tasks
 
 For each table the connector creates a query job, polls it to completion, then
 pages through the results and upserts each row. Syncs are incremental: the
@@ -70,8 +71,8 @@ DEFAULT_OBJECT_SELECTS = {
 #                 are sorted ascending by the cursor field, so we can advance the
 #                 checkpoint page by page.
 #   - "events" /  POST body is an optional `filter`; results are not guaranteed
-#     "sequence"  to be ordered by the cursor field, so we checkpoint once at the
-#                 end of the job using the max cursor value observed.
+#     "sequence" /  to be ordered by the cursor field, so we checkpoint once at
+#     "task"        the end of the job using the max cursor value observed.
 RESOURCES = {
     "company": {
         "base": "/data/v1/objects/company",
@@ -96,6 +97,11 @@ RESOURCES = {
     "sequence_enrollment_step": {
         "base": "/sequences/v1/enrollment-steps",
         "kind": "sequence",
+        "cursor_field": "updated_at",
+    },
+    "task": {
+        "base": "/tasks/v1/tasks",
+        "kind": "task",
         "cursor_field": "updated_at",
     },
 }
@@ -156,6 +162,17 @@ def schema(configuration: dict):
                 "updated_at": "UTC_DATETIME",
                 "created_at": "UTC_DATETIME",
                 "started_at": "UTC_DATETIME",
+                "ended_at": "UTC_DATETIME",
+            },
+        },
+        {
+            "table": "task",
+            "primary_key": ["id"],
+            "columns": {
+                "id": "STRING",
+                "updated_at": "UTC_DATETIME",
+                "created_at": "UTC_DATETIME",
+                "due_at": "UTC_DATETIME",
                 "ended_at": "UTC_DATETIME",
             },
         },
@@ -244,8 +261,8 @@ def build_job_body(spec, selects, cursor):
                 "metadata": {"updated_at": {"gte": cursor}},
             }
         }
-    # Events and sequences take an optional `filter`. Scope by the cursor field
-    # so each job only returns new or changed records.
+    # Events, sequences, and tasks take an optional `filter`. Scope by the
+    # cursor field so each job only returns new or changed records.
     return {"filter": {spec["cursor_field"]: {"gte": cursor}}}
 
 
