@@ -171,12 +171,30 @@ definitions:
         updated_at: { type: ["null", "string"], format: date-time }
         started_at: { type: ["null", "string"], format: date-time }
         ended_at: { type: ["null", "string"], format: date-time }
+  schema_task:
+    type: InlineSchemaLoader
+    schema:
+      $schema: http://json-schema.org/draft-07/schema#
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: ["null", "string"] }
+        type: { type: ["null", "string"] }
+        status: { type: ["null", "string"] }
+        priority: { type: ["null", "string"] }
+        person_id: { type: ["null", "string"] }
+        assigned_user_id: { type: ["null", "string"] }
+        created_at: { type: ["null", "string"], format: date-time }
+        updated_at: { type: ["null", "string"], format: date-time }
+        due_at: { type: ["null", "string"], format: date-time }
+        ended_at: { type: ["null", "string"], format: date-time }
 
   # --- streams ---------------------------------------------------------------
   #
   # Each stream sets $parameters.resource (the resource base path). Object
   # resources (company, person, opportunity) require a `query` with
-  # select/sort_by/metadata; events and sequences take an optional `filter`.
+  # select/sort_by/metadata; events, sequences, and tasks take an optional
+  # `filter`.
   streams:
     # `select` lists the scalar standard attributes so the table comes out flat.
     company:
@@ -341,6 +359,25 @@ definitions:
               updated_at:
                 gte: "{{ stream_interval['start_time'] }}"
 
+    task:
+      type: DeclarativeStream
+      name: task
+      primary_key: ["id"]
+      $parameters:
+        resource: "/tasks/v1/tasks"
+      schema_loader:
+        $ref: "#/definitions/schema_task"
+      incremental_sync:
+        $ref: "#/definitions/cursor_updated_at"
+      retriever:
+        $ref: "#/definitions/base_async_retriever"
+        creation_requester:
+          $ref: "#/definitions/base_creation_requester"
+          request_body_json:
+            filter:
+              updated_at:
+                gte: "{{ stream_interval['start_time'] }}"
+
     # Synchronous metadata stream backing the connection `check`. Unlike the Bulk
     # streams, this is a plain SimpleRetriever GET that returns immediately (no
     # create -> poll -> download job lifecycle), so `check` verifies credentials
@@ -384,6 +421,7 @@ streams:
   - $ref: "#/definitions/streams/event"
   - $ref: "#/definitions/streams/sequence_enrollment"
   - $ref: "#/definitions/streams/sequence_enrollment_step"
+  - $ref: "#/definitions/streams/task"
   - $ref: "#/definitions/streams/object_definitions"
 
 # --- concurrency -------------------------------------------------------------
@@ -392,12 +430,12 @@ streams:
 max_concurrent_async_job_count: 1
 
 # Streams synced in parallel: config-driven via num_workers (default 2), capped
-# at 6 (one per stream). Each parallel stream creates another job, and job
+# at 7 (one per Bulk stream). Each parallel stream creates another job, and job
 # creation is rate-limited (~100/day), so keep it modest.
 concurrency_level:
   type: ConcurrencyLevel
   default_concurrency: "{{ config['num_workers'] or 2 }}"
-  max_concurrency: 6
+  max_concurrency: 7
 
 # --- connection check --------------------------------------------------------
 
@@ -467,8 +505,8 @@ spec:
         description: >-
           How many streams to sync in parallel. Higher values finish faster but
           create more Bulk query jobs at once; keep it modest to stay within
-          Unify's job-creation rate limit. Capped at 6 (one per stream).
+          Unify's job-creation rate limit. Capped at 7 (one per Bulk stream).
         minimum: 1
-        maximum: 6
+        maximum: 7
         default: 2
         order: 5

@@ -24,11 +24,12 @@ requests. For each resource the connector:
 | `event`                    | `/data/v1/events`                   | `created_at` |
 | `sequence_enrollment`      | `/sequences/v1/enrollments`         | `updated_at` |
 | `sequence_enrollment_step` | `/sequences/v1/enrollment-steps`    | `updated_at` |
+| `task`                     | `/tasks/v1/tasks`                   | `updated_at` |
 
 Each table is keyed on `id`. Object-record results are sorted ascending by
-`updated_at`, so the connector checkpoints page by page. Events and sequence
-results aren't guaranteed to be cursor-ordered, so those checkpoint once per job
-using the maximum cursor value observed. Because upserts are keyed on stable
+`updated_at`, so the connector checkpoints page by page. Event, sequence, and
+task results aren't guaranteed to be cursor-ordered, so those checkpoint once
+per job using the maximum cursor value observed. Because upserts are keyed on stable
 record IDs, the small overlap an incremental `gte` filter produces is idempotent.
 
 ## Project layout

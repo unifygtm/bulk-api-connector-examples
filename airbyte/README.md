@@ -28,6 +28,7 @@ For each resource it:
 | `event`                    | `/data/v1/events`                | `timestamp`  |
 | `sequence_enrollment`      | `/sequences/v1/enrollments`      | `updated_at` |
 | `sequence_enrollment_step` | `/sequences/v1/enrollment-steps` | `updated_at` |
+| `task`                     | `/tasks/v1/tasks`                | `updated_at` |
 | `object_definitions`       | `/data/v1/objects`               | —            |
 
 (`user` is also a standard object but is left out — it's an internal
@@ -42,7 +43,7 @@ it's a registered stream so it also shows up in the catalog.
 
 | File                                        | Purpose                                                                               |
 | ------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `manifest.yaml`                             | The whole connector: shared definitions, the six streams, `check`, `spec`.            |
+| `manifest.yaml`                             | The whole connector: shared definitions, the streams, `check`, `spec`.                |
 | `metadata.yaml`                             | Connector id, image repo/tag, and the declarative-manifest base image.                |
 | `config.example.json`                       | Template config; copy to `secrets/config.json` and add your API key.                  |
 | `build_config.py`                           | Merges `manifest.yaml` into your config for the `source-declarative-manifest` runner. |
@@ -61,7 +62,7 @@ attribute the Bulk API returns flow through.
 | `start_date`           | No       | `1970-01-01T00:00:00Z`     | Only sync records changed at or after this UTC timestamp. |
 | `page_size`            | No       | `1000`                     | JSON result page size (max `2000`).                       |
 | `poll_timeout_minutes` | No       | `60`                       | Max minutes to wait for a single job to finish.           |
-| `num_workers`          | No       | `2`                        | Streams to sync in parallel (1–6). See concurrency note.  |
+| `num_workers`          | No       | `2`                        | Streams to sync in parallel (1–7). See concurrency note.  |
 
 Generate an API key in
 [Settings → Developers](https://app.unifygtm.com/dashboard/settings/integrations/api-keys).
@@ -155,8 +156,8 @@ or upload `manifest.yaml` directly via the Connector Builder.
   strategy so 429 retries wait for the duration in the API's `Retry-After`
   header rather than a default exponential backoff.
 - **Concurrency:** the manifest's `concurrency_level` (`ConcurrencyLevel`) syncs
-  up to `num_workers` streams in parallel (default `2`, ceiling `6` — one per
-  stream), and `max_concurrent_async_job_count: 1` caps in-flight Bulk jobs per
+  up to `num_workers` streams in parallel (default `2`, ceiling `7` — one per
+  Bulk stream), and `max_concurrent_async_job_count: 1` caps in-flight Bulk jobs per
   stream (each sync issues exactly one). Each parallel stream creates another
   job, so keep `num_workers` modest to stay under the job-creation rate limit.
 - **Job expiry:** jobs and results expire 24h after creation; each sync
