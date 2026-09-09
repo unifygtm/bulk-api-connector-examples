@@ -51,7 +51,21 @@ it's a registered stream so it also shows up in the catalog.
 
 Record schemas are declared inline in `manifest.yaml` (`InlineSchemaLoader`):
 known columns are typed and `additionalProperties: true` lets any other
-attribute the Bulk API returns flow through.
+attribute the Bulk API returns flow through. The sequence and event streams
+expand their related records inline, so `sequence`, `mailbox`, `person`,
+`enrolled_by_play`, `enrollment`, and the email messages arrive as nested
+objects rather than scalar columns.
+
+Object-record rows nest the attributes you selected under an `attributes`
+object. The three object streams apply a `DpathFlattenFields` transformation
+that lifts those to the top level, so `company`, `person`, and `opportunity`
+come out flat. An attribute with no value is omitted from the row, so its
+column only appears once some record has it.
+
+The `select` lists in `manifest.yaml` name standard attributes. Selecting an
+attribute your workspace doesn't have fails job creation with a
+`unknown_attribute` `400`, so check `GET /data/v1/objects/{object}/attributes`
+before adding one.
 
 ## Configuration
 

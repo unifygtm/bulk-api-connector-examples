@@ -7,6 +7,7 @@ asynchronous Bulk API. Each synced table maps to one Bulk API resource:
     -----                       ------------------
     company                     /data/v1/objects/company
     person                      /data/v1/objects/person
+    opportunity                 /data/v1/objects/opportunity
     event                       /data/v1/events
     sequence_enrollment         /sequences/v1/enrollments
     sequence_enrollment_step    /sequences/v1/enrollment-steps
@@ -15,8 +16,9 @@ asynchronous Bulk API. Each synced table maps to one Bulk API resource:
 For each table the connector creates a query job, polls it to completion, then
 pages through the results and upserts each row. Syncs are incremental: the
 connector stores the high-water mark of each table's cursor field (`updated_at`
-for object records and sequences, `created_at` for the immutable event stream)
-in Fivetran state and uses it to scope the next job's filter.
+for object records, sequences, and tasks; `timestamp` for the immutable event
+stream, the only datetime the events resource can filter on) in Fivetran state
+and uses it to scope the next job's filter.
 
 See the Bulk API guide:
 https://docs.unifygtm.com/developers/guides/request-data/bulk-api
@@ -36,8 +38,12 @@ DEFAULT_CURSOR = "1970-01-01T00:00:00Z"
 
 # Default attribute selects for object-record resources. The Bulk API requires
 # a `select` for object jobs; we list the scalar standard attributes so each
-# table comes out flat. Add or remove attribute API names here to customize the
-# columns, or override per deployment via the `object_selects` configuration.
+# table comes out flat. Composite values (`address`) and reference attributes
+# are left out because they come back as nested objects. Add or remove
+# attribute API names here to customize the columns, or override per
+# deployment via the `object_selects` configuration. Selecting an attribute
+# your workspace does not have fails job creation with a 400, so check
+# `GET /data/v1/objects/{object}/attributes` before adding one.
 DEFAULT_OBJECT_SELECTS = {
     "company": [
         "name",
@@ -50,6 +56,8 @@ DEFAULT_OBJECT_SELECTS = {
         "status",
         "lead_source",
         "linkedin_url",
+        "corporate_phone",
+        "do_not_contact",
         "last_activity_at",
     ],
     "person": [
@@ -60,9 +68,23 @@ DEFAULT_OBJECT_SELECTS = {
         "status",
         "lead_source",
         "linkedin_url",
+        "corporate_phone",
+        "mobile_phone",
+        "work_phone",
+        "do_not_call",
         "do_not_email",
         "email_opt_out",
+        "eu_resident",
         "last_activity_at",
+    ],
+    "opportunity": [
+        "name",
+        "uniqueness_key",
+        "amount",
+        "stage",
+        "opportunity_type",
+        "lead_source",
+        "original_created_at",
     ],
 }
 
@@ -84,10 +106,17 @@ RESOURCES = {
         "kind": "object",
         "cursor_field": "updated_at",
     },
+    "opportunity": {
+        "base": "/data/v1/objects/opportunity",
+        "kind": "object",
+        "cursor_field": "updated_at",
+    },
     "event": {
         "base": "/data/v1/events",
         "kind": "events",
-        "cursor_field": "created_at",
+        # The events resource filters and orders on `timestamp`; it returns no
+        # `created_at`.
+        "cursor_field": "timestamp",
     },
     "sequence_enrollment": {
         "base": "/sequences/v1/enrollments",
@@ -135,12 +164,21 @@ def schema(configuration: dict):
             },
         },
         {
+            "table": "opportunity",
+            "primary_key": ["id"],
+            "columns": {
+                "id": "STRING",
+                "updated_at": "UTC_DATETIME",
+                "created_at": "UTC_DATETIME",
+                "original_created_at": "UTC_DATETIME",
+            },
+        },
+        {
             "table": "event",
             "primary_key": ["id"],
             "columns": {
                 "id": "STRING",
                 "timestamp": "UTC_DATETIME",
-                "created_at": "UTC_DATETIME",
             },
         },
         {
@@ -155,12 +193,12 @@ def schema(configuration: dict):
             },
         },
         {
+            # Enrollment steps carry no `created_at`; `updated_at` is the cursor.
             "table": "sequence_enrollment_step",
             "primary_key": ["id"],
             "columns": {
                 "id": "STRING",
                 "updated_at": "UTC_DATETIME",
-                "created_at": "UTC_DATETIME",
                 "started_at": "UTC_DATETIME",
                 "ended_at": "UTC_DATETIME",
             },
@@ -170,6 +208,7 @@ def schema(configuration: dict):
             "primary_key": ["id"],
             "columns": {
                 "id": "STRING",
+                "note_content": "STRING",
                 "updated_at": "UTC_DATETIME",
                 "created_at": "UTC_DATETIME",
                 "due_at": "UTC_DATETIME",
@@ -267,13 +306,25 @@ def build_job_body(spec, selects, cursor):
 
 
 def flatten_row(row):
-    """Serialize nested objects/lists to JSON strings for flat destination columns.
+    """Flatten one result row into destination columns.
 
-    Scalar values pass through unchanged. Reference expansions (nested selects)
-    and list-valued attributes are stored as JSON text.
+    Object-record rows nest the attributes you selected under `attributes`
+    (alongside `object`, `id`, `created_at`, `updated_at`); those are lifted to
+    top-level columns so the table matches the `select`. Attributes with no
+    value are omitted from the row entirely, so a column only appears once some
+    record has it. Base record fields win over a like-named attribute.
+
+    Anything still nested after that (reference expansions, event
+    `properties`, and the sequence resources' `sequence`/`person`/`mailbox`/
+    `enrolled_by_play` objects) is stored as JSON text. Scalars pass through
+    unchanged.
     """
+    attributes = row.get("attributes")
+    merged = dict(attributes) if isinstance(attributes, dict) else {}
+    merged.update({key: value for key, value in row.items() if key != "attributes"})
+
     flat = {}
-    for key, value in row.items():
+    for key, value in merged.items():
         if isinstance(value, (dict, list)):
             flat[key] = json.dumps(value)
         else:

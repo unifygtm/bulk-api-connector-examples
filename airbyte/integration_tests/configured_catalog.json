@@ -8,6 +8,12 @@
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "object": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
             "id": {
               "type": [
                 "null",
@@ -63,6 +69,12 @@
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "object": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
             "id": {
               "type": [
                 "null",
@@ -118,6 +130,12 @@
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "object": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
             "id": {
               "type": [
                 "null",
@@ -179,12 +197,11 @@
                 "string"
               ]
             },
-            "created_at": {
+            "original_event_id": {
               "type": [
                 "null",
                 "string"
-              ],
-              "format": "date-time"
+              ]
             },
             "timestamp": {
               "type": [
@@ -192,6 +209,51 @@
                 "string"
               ],
               "format": "date-time"
+            },
+            "type": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "name": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "properties": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
+            },
+            "anonymous_id": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "session_id": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "company": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
+            },
+            "person": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
             }
           }
         },
@@ -261,6 +323,95 @@
                 "string"
               ],
               "format": "date-time"
+            },
+            "status": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "version": {
+              "type": [
+                "null",
+                "integer"
+              ]
+            },
+            "is_blocked": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_bounced": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_canceled": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_excluded": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_opted_out": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_paused": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_replied": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "sequence": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
+            },
+            "mailbox": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
+            },
+            "person": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
+            },
+            "enrolled_by_play": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
+            },
+            "reply_email_message": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
             }
           }
         },
@@ -303,13 +454,6 @@
                 "string"
               ]
             },
-            "created_at": {
-              "type": [
-                "null",
-                "string"
-              ],
-              "format": "date-time"
-            },
             "updated_at": {
               "type": [
                 "null",
@@ -330,6 +474,88 @@
                 "string"
               ],
               "format": "date-time"
+            },
+            "type": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "status": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "step_number": {
+              "type": [
+                "null",
+                "integer"
+              ]
+            },
+            "is_blocked": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_bounced": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_canceled": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_opted_out": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_paused": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "is_replied": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "sequence": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
+            },
+            "enrollment": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
+            },
+            "email_message": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
+            },
+            "reply_email_message": {
+              "type": [
+                "null",
+                "object"
+              ],
+              "additionalProperties": true
             }
           }
         },
@@ -402,6 +628,12 @@
                 "string"
               ]
             },
+            "note_content": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
             "created_at": {
               "type": [
                 "null",
@@ -466,6 +698,12 @@
           "additionalProperties": true,
           "properties": {
             "provider": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "category": {
               "type": [
                 "null",
                 "string"

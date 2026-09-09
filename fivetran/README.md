@@ -21,10 +21,22 @@ requests. For each resource the connector:
 | -------------------------- | ----------------------------------- | ------------ |
 | `company`                  | `/data/v1/objects/company`          | `updated_at` |
 | `person`                   | `/data/v1/objects/person`           | `updated_at` |
-| `event`                    | `/data/v1/events`                   | `created_at` |
+| `opportunity`              | `/data/v1/objects/opportunity`      | `updated_at` |
+| `event`                    | `/data/v1/events`                   | `timestamp`  |
 | `sequence_enrollment`      | `/sequences/v1/enrollments`         | `updated_at` |
 | `sequence_enrollment_step` | `/sequences/v1/enrollment-steps`    | `updated_at` |
 | `task`                     | `/tasks/v1/tasks`                   | `updated_at` |
+
+`timestamp` is the only datetime the events resource can filter on, so it is
+the event cursor; events carry no `created_at`.
+
+Object-record results nest the attributes you selected under an `attributes`
+object. The connector lifts those to top-level columns, so `company` and
+`person` come out flat. An attribute with no value is omitted from the row, so
+its column only appears once some record has it. Every other nested value —
+reference expansions, event `properties`, and the sequence resources'
+`sequence`, `person`, `mailbox`, and `enrolled_by_play` objects — is stored as
+JSON text.
 
 Each table is keyed on `id`. Object-record results are sorted ascending by
 `updated_at`, so the connector checkpoints page by page. Event, sequence, and
@@ -67,6 +79,12 @@ JSON string, e.g.:
 ```json
 { "object_selects": "{\"company\": [\"name\", \"domain\", \"industry\"]}" }
 ```
+
+The defaults cover the scalar standard attributes of each object. Composite
+values such as `address` and reference attributes are left out because they
+come back as nested objects. Selecting an attribute your workspace does not
+have fails job creation with a `400`, so check
+`GET /data/v1/objects/{object}/attributes` before adding one.
 
 ## Run it locally
 
