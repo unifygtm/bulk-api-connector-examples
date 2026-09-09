@@ -55,7 +55,7 @@ definitions:
     type: AsyncRetriever
     status_mapping:
       type: AsyncJobStatusMap
-      running: ["CREATED", "PENDING", "RUNNING", "IN_PROGRESS"]
+      running: ["IN_PROGRESS"]
       completed: ["FINISHED"]
       failed: ["FAILED", "CANCELED", "EXPIRED"]
       # Unify has no timed-out status; the CDK requires the key, so leave it
@@ -138,7 +138,13 @@ definitions:
   # --- schemas ---------------------------------------------------------------
 
   # Known columns are typed; additionalProperties lets any other attribute the
-  # Bulk API returns flow through (nested objects/lists arrive as JSON).
+  # Bulk API returns flow through. The sequence and event resources expand their
+  # related records inline, so those columns are declared as nested objects.
+  #
+  # Object rows are {object, id, created_at, updated_at, attributes}; the object
+  # streams flatten `attributes` to the top level, so each selected attribute
+  # lands as an additional property (a record omits attributes it has no value
+  # for, so the set varies row to row).
   schema_object:
     type: InlineSchemaLoader
     schema:
@@ -146,9 +152,11 @@ definitions:
       type: object
       additionalProperties: true
       properties:
+        object: { type: ["null", "string"] }
         id: { type: ["null", "string"] }
         created_at: { type: ["null", "string"], format: date-time }
         updated_at: { type: ["null", "string"], format: date-time }
+  # Events carry no created_at; `timestamp` is the event clock and the cursor.
   schema_event:
     type: InlineSchemaLoader
     schema:
@@ -157,9 +165,19 @@ definitions:
       additionalProperties: true
       properties:
         id: { type: ["null", "string"] }
-        created_at: { type: ["null", "string"], format: date-time }
+        original_event_id: { type: ["null", "string"] }
         timestamp: { type: ["null", "string"], format: date-time }
-  schema_sequence:
+        type: { type: ["null", "string"] }
+        name: { type: ["null", "string"] }
+        properties: { type: ["null", "object"], additionalProperties: true }
+        anonymous_id: { type: ["null", "string"] }
+        session_id: { type: ["null", "string"] }
+        company: { type: ["null", "object"], additionalProperties: true }
+        person: { type: ["null", "object"], additionalProperties: true }
+  # Enrollments expand their related records inline: `sequence`, `mailbox`
+  # (which nests its `user`), `person` (which nests its `company`),
+  # `enrolled_by_play`, and `reply_email_message` all arrive as objects.
+  schema_enrollment:
     type: InlineSchemaLoader
     schema:
       $schema: http://json-schema.org/draft-07/schema#
@@ -171,6 +189,46 @@ definitions:
         updated_at: { type: ["null", "string"], format: date-time }
         started_at: { type: ["null", "string"], format: date-time }
         ended_at: { type: ["null", "string"], format: date-time }
+        status: { type: ["null", "string"] }
+        version: { type: ["null", "integer"] }
+        is_blocked: { type: ["null", "boolean"] }
+        is_bounced: { type: ["null", "boolean"] }
+        is_canceled: { type: ["null", "boolean"] }
+        is_excluded: { type: ["null", "boolean"] }
+        is_opted_out: { type: ["null", "boolean"] }
+        is_paused: { type: ["null", "boolean"] }
+        is_replied: { type: ["null", "boolean"] }
+        sequence: { type: ["null", "object"], additionalProperties: true }
+        mailbox: { type: ["null", "object"], additionalProperties: true }
+        person: { type: ["null", "object"], additionalProperties: true }
+        enrolled_by_play: { type: ["null", "object"], additionalProperties: true }
+        reply_email_message: { type: ["null", "object"], additionalProperties: true }
+  # Steps carry no created_at (and no is_excluded); they expand `enrollment`
+  # (which nests the mailbox and person), `sequence`, and the email messages.
+  schema_enrollment_step:
+    type: InlineSchemaLoader
+    schema:
+      $schema: http://json-schema.org/draft-07/schema#
+      type: object
+      additionalProperties: true
+      properties:
+        id: { type: ["null", "string"] }
+        updated_at: { type: ["null", "string"], format: date-time }
+        started_at: { type: ["null", "string"], format: date-time }
+        ended_at: { type: ["null", "string"], format: date-time }
+        type: { type: ["null", "string"] }
+        status: { type: ["null", "string"] }
+        step_number: { type: ["null", "integer"] }
+        is_blocked: { type: ["null", "boolean"] }
+        is_bounced: { type: ["null", "boolean"] }
+        is_canceled: { type: ["null", "boolean"] }
+        is_opted_out: { type: ["null", "boolean"] }
+        is_paused: { type: ["null", "boolean"] }
+        is_replied: { type: ["null", "boolean"] }
+        sequence: { type: ["null", "object"], additionalProperties: true }
+        enrollment: { type: ["null", "object"], additionalProperties: true }
+        email_message: { type: ["null", "object"], additionalProperties: true }
+        reply_email_message: { type: ["null", "object"], additionalProperties: true }
   schema_task:
     type: InlineSchemaLoader
     schema:
@@ -184,6 +242,7 @@ definitions:
         priority: { type: ["null", "string"] }
         person_id: { type: ["null", "string"] }
         assigned_user_id: { type: ["null", "string"] }
+        note_content: { type: ["null", "string"] }
         created_at: { type: ["null", "string"], format: date-time }
         updated_at: { type: ["null", "string"], format: date-time }
         due_at: { type: ["null", "string"], format: date-time }
@@ -196,7 +255,10 @@ definitions:
   # select/sort_by/metadata; events, sequences, and tasks take an optional
   # `filter`.
   streams:
-    # `select` lists the scalar standard attributes so the table comes out flat.
+    # `select` lists the scalar standard attributes, and the DpathFlattenFields
+    # transformation lifts them out of the row's `attributes` object so the
+    # table comes out flat. Composite values (`address`) and reference
+    # attributes are left out because they come back as nested objects.
     company:
       type: DeclarativeStream
       name: company
@@ -205,6 +267,10 @@ definitions:
         resource: "/data/v1/objects/company"
       schema_loader:
         $ref: "#/definitions/schema_object"
+      transformations:
+        - type: DpathFlattenFields
+          field_path: ["attributes"]
+          delete_origin_value: true
       incremental_sync:
         $ref: "#/definitions/cursor_updated_at"
       retriever:
@@ -224,6 +290,8 @@ definitions:
                 status: true
                 lead_source: true
                 linkedin_url: true
+                corporate_phone: true
+                do_not_contact: true
                 last_activity_at: true
               sort_by:
                 field: "updated_at"
@@ -240,6 +308,10 @@ definitions:
         resource: "/data/v1/objects/person"
       schema_loader:
         $ref: "#/definitions/schema_object"
+      transformations:
+        - type: DpathFlattenFields
+          field_path: ["attributes"]
+          delete_origin_value: true
       incremental_sync:
         $ref: "#/definitions/cursor_updated_at"
       retriever:
@@ -256,8 +328,13 @@ definitions:
                 status: true
                 lead_source: true
                 linkedin_url: true
+                corporate_phone: true
+                mobile_phone: true
+                work_phone: true
+                do_not_call: true
                 do_not_email: true
                 email_opt_out: true
+                eu_resident: true
                 last_activity_at: true
               sort_by:
                 field: "updated_at"
@@ -266,8 +343,9 @@ definitions:
                 updated_at:
                   gte: "{{ stream_interval['start_time'] }}"
 
-    # company/person/record_owner reference attributes are left out to keep the
-    # table flat; add them to `select` if you want them.
+    # company/person/record_owner reference attributes are left out: reference
+    # selects expand into nested objects rather than a scalar column. Add them
+    # to `select` if you want them.
     opportunity:
       type: DeclarativeStream
       name: opportunity
@@ -276,6 +354,10 @@ definitions:
         resource: "/data/v1/objects/opportunity"
       schema_loader:
         $ref: "#/definitions/schema_object"
+      transformations:
+        - type: DpathFlattenFields
+          field_path: ["attributes"]
+          delete_origin_value: true
       incremental_sync:
         $ref: "#/definitions/cursor_updated_at"
       retriever:
@@ -292,8 +374,6 @@ definitions:
                 opportunity_type: true
                 lead_source: true
                 original_created_at: true
-                hubspot_url: true
-                salesforce_url: true
               sort_by:
                 field: "updated_at"
                 direction: "ASCENDING"
@@ -328,7 +408,7 @@ definitions:
       $parameters:
         resource: "/sequences/v1/enrollments"
       schema_loader:
-        $ref: "#/definitions/schema_sequence"
+        $ref: "#/definitions/schema_enrollment"
       incremental_sync:
         $ref: "#/definitions/cursor_updated_at"
       retriever:
@@ -347,7 +427,7 @@ definitions:
       $parameters:
         resource: "/sequences/v1/enrollment-steps"
       schema_loader:
-        $ref: "#/definitions/schema_sequence"
+        $ref: "#/definitions/schema_enrollment_step"
       incremental_sync:
         $ref: "#/definitions/cursor_updated_at"
       retriever:
@@ -397,6 +477,7 @@ definitions:
           additionalProperties: true
           properties:
             provider: { type: ["null", "string"] }
+            category: { type: ["null", "string"] }
             api_name: { type: ["null", "string"] }
             display_name: { type: ["null", "string"] }
             description: { type: ["null", "string"] }
