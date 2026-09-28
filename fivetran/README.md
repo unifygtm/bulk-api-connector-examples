@@ -31,12 +31,13 @@ requests. For each resource the connector:
 the event cursor; events carry no `created_at`.
 
 Object-record results nest the attributes you selected under an `attributes`
-object. The connector lifts those to top-level columns, so `company` and
-`person` come out flat. An attribute with no value is omitted from the row, so
-its column only appears once some record has it. Every other nested value —
-reference expansions, event `properties`, and the sequence resources'
-`sequence`, `person`, `mailbox`, and `enrolled_by_play` objects — is stored as
-JSON text.
+object. The connector lifts those to top-level columns, so `company`,
+`person`, and `opportunity` come out flat. An attribute with no value is
+omitted from the row, so its column only appears once some record has it.
+Every other nested value — reference expansions, currency values such as
+company `revenue`, event `properties`/`company`/`person`, and the sequence
+resources' `sequence`, `person`, `mailbox`, `enrollment`, `enrolled_by_play`,
+`email_message`, and `reply_email_message` objects — is stored as JSON text.
 
 Each table is keyed on `id`. Object-record results are sorted ascending by
 `updated_at`, so the connector checkpoints page by page. Event, sequence, and
@@ -81,10 +82,13 @@ JSON string, e.g.:
 ```
 
 The defaults cover the scalar standard attributes of each object. Composite
-values such as `address` and reference attributes are left out because they
-come back as nested objects. Selecting an attribute your workspace does not
-have fails job creation with a `400`, so check
-`GET /data/v1/objects/{object}/attributes` before adding one.
+values and reference attributes are left out because they come back as nested
+objects: `address`, `record_owner`, and the company `revenue` currency, which
+returns `{ "code": "USD", "value": 1000000 }`. Add them to `object_selects` if
+you want them as JSON text columns. (Opportunity `amount` has no currency code
+and is returned as a plain number, so it stays in the defaults.) Selecting an
+attribute your workspace does not have fails job creation with a `400`, so
+check `GET /data/v1/objects/{object}/attributes` before adding one.
 
 ## Run it locally
 

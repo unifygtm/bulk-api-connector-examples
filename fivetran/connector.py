@@ -38,12 +38,14 @@ DEFAULT_CURSOR = "1970-01-01T00:00:00Z"
 
 # Default attribute selects for object-record resources. The Bulk API requires
 # a `select` for object jobs; we list the scalar standard attributes so each
-# table comes out flat. Composite values (`address`) and reference attributes
-# are left out because they come back as nested objects. Add or remove
-# attribute API names here to customize the columns, or override per
-# deployment via the `object_selects` configuration. Selecting an attribute
-# your workspace does not have fails job creation with a 400, so check
-# `GET /data/v1/objects/{object}/attributes` before adding one.
+# table comes out flat. Composite values (`address`, and the company `revenue`
+# currency, which returns `{code, value}`) and reference attributes are left
+# out because they come back as nested objects; `flatten_row` would store them
+# as JSON text. Opportunity `amount` has no currency code and stays a plain
+# number. Add or remove attribute API names here to customize the columns, or
+# override per deployment via the `object_selects` configuration. Selecting an
+# attribute your workspace does not have fails job creation with a 400, so
+# check `GET /data/v1/objects/{object}/attributes` before adding one.
 DEFAULT_OBJECT_SELECTS = {
     "company": [
         "name",
@@ -51,7 +53,6 @@ DEFAULT_OBJECT_SELECTS = {
         "description",
         "industry",
         "employee_count",
-        "revenue",
         "founded",
         "status",
         "lead_source",
@@ -314,10 +315,11 @@ def flatten_row(row):
     value are omitted from the row entirely, so a column only appears once some
     record has it. Base record fields win over a like-named attribute.
 
-    Anything still nested after that (reference expansions, event
-    `properties`, and the sequence resources' `sequence`/`person`/`mailbox`/
-    `enrolled_by_play` objects) is stored as JSON text. Scalars pass through
-    unchanged.
+    Anything still nested after that (reference expansions, currency values
+    like company `revenue`, event `properties`, `company`, and `person`, and
+    the sequence resources' `sequence`, `person`, `mailbox`, `enrollment`,
+    `enrolled_by_play`, `email_message`, and `reply_email_message` objects) is
+    stored as JSON text. Scalars pass through unchanged.
     """
     attributes = row.get("attributes")
     merged = dict(attributes) if isinstance(attributes, dict) else {}
