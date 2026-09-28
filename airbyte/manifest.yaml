@@ -257,8 +257,9 @@ definitions:
   streams:
     # `select` lists the scalar standard attributes, and the DpathFlattenFields
     # transformation lifts them out of the row's `attributes` object so the
-    # table comes out flat. Composite values (`address`) and reference
-    # attributes are left out because they come back as nested objects.
+    # table comes out flat. Composite values (`address`, and the `revenue`
+    # currency, which returns `{code, value}`) and reference attributes are
+    # left out because they come back as nested objects.
     company:
       type: DeclarativeStream
       name: company
@@ -285,7 +286,6 @@ definitions:
                 description: true
                 industry: true
                 employee_count: true
-                revenue: true
                 founded: true
                 status: true
                 lead_source: true
@@ -345,7 +345,8 @@ definitions:
 
     # company/person/record_owner reference attributes are left out: reference
     # selects expand into nested objects rather than a scalar column. Add them
-    # to `select` if you want them.
+    # to `select` if you want them. `amount` has no currency code and comes
+    # back as a plain number.
     opportunity:
       type: DeclarativeStream
       name: opportunity

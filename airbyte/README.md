@@ -62,10 +62,13 @@ that lifts those to the top level, so `company`, `person`, and `opportunity`
 come out flat. An attribute with no value is omitted from the row, so its
 column only appears once some record has it.
 
-The `select` lists in `manifest.yaml` name standard attributes. Selecting an
-attribute your workspace doesn't have fails job creation with a
-`unknown_attribute` `400`, so check `GET /data/v1/objects/{object}/attributes`
-before adding one.
+The `select` lists in `manifest.yaml` name the scalar standard attributes.
+Composite values and reference attributes (`address`, `record_owner`, and the
+company `revenue` currency, which returns `{ "code": "USD", "value": 1000000 }`)
+are left out because they arrive as nested objects; add them to `select` if you
+want them. Selecting an attribute your workspace doesn't have fails job creation
+with a `unknown_attribute` `400`, so check
+`GET /data/v1/objects/{object}/attributes` before adding one.
 
 ## Configuration
 
